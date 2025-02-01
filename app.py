@@ -186,7 +186,7 @@ def speedtest():
                     VALUES (?, ?, ?, ?, ?)
                 ''', (datetime.now(), download_mbps, upload_mbps, ping_ms, url))
                 conn.commit()
-            return jsonify({"output": data})
+            return jsonify({"redirect": url_for('results'),"output": data})
         except Exception as e:
             print(f"Error: {e}")
             return jsonify({"error": str(e)}), 500
