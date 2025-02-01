@@ -176,7 +176,7 @@ def speedtest():
         try:
             output = subprocess.check_output(["speedtest", "--accept-gdpr","--accept-license", "--format=json"], text=True)
             data = json.loads(output)
-            url = data.get('server', {}).get('url', '')
+            url = data['result']['url']
             download_mbps = data['download']['bandwidth'] / 125000
             upload_mbps = data['upload']['bandwidth'] / 125000
             ping_ms = data['ping']['latency']
