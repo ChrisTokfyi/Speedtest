@@ -1,0 +1,15 @@
+services:
+  web:
+    build: .
+    network_mode: host
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+      - db-data:/data
+    environment:
+      FLASK_ENV: production
+    command: flask run --host=0.0.0.0
+ 
+volumes:
+  db-data:
