@@ -9,7 +9,6 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# Configuration
 DATABASE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'speedtest.db')
 LOCKFILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'speedtest.lock')
 
@@ -31,7 +30,6 @@ def init_db():
 
 init_db()
 
-# Lockfile functions
 def create_lockfile():
     with open(LOCKFILE, 'w') as f:
         f.write('locked')
@@ -43,17 +41,15 @@ def remove_lockfile():
 def is_locked():
     return os.path.exists(LOCKFILE)
 
-# Fetch nearby servers
 def get_servers():
     url = "https://www.speedtest.net/api/js/servers?engine=js&limit=10&https_functional=true"
     try:
         response = requests.get(url)
-        response.raise_for_status()  # Raise an error for bad responses (4xx, 5xx)
-        servers = response.json()  # Parse JSON response
-        return servers  # Return the list of servers, not wrapped in jsonify
+        response.raise_for_status()
+        servers = response.json() 
+        return servers 
     except requests.RequestException as e:
-        return {"error": str(e)}  # Return error message if request fails
-
+        return {"error": str(e)}
 
 HTML = """
 <!DOCTYPE html>
@@ -111,19 +107,16 @@ HTML = """
     </div>
     <script>
         document.getElementById('speedtestForm').addEventListener('submit', function(event) {
-    event.preventDefault();  // Prevent the form from submitting normally
+    event.preventDefault();  
 
-    // Show the "Testing..." message and hide others
     document.getElementById('testingMessage').classList.remove('hidden');
     document.getElementById('waitingMessage').classList.add('hidden');
     document.getElementById('error').classList.add('hidden');
 
-    // Get server ID
     const serverSelect = document.getElementById('serverSelect');
     const customServer = document.getElementById('customServer');
     const serverId = customServer.value || serverSelect.value;
 
-    // Submit the form data using Fetch API
     fetch("{{ url_for('speedtest') }}", {
         method: 'POST',
         headers: {
@@ -134,23 +127,22 @@ HTML = """
     .then(response => response.json())
     .then(data => {
         if (data.redirect) {
-            window.location.href = data.redirect;  // Redirect to the results page
+            window.location.href = data.redirect; 
         } else if (data.waiting) {
             document.getElementById('testingMessage').classList.add('hidden');
             document.getElementById('waitingMessage').classList.remove('hidden');
             checkLock();
         } else if (data.error) {
-            // Display the error message
             document.getElementById('testingMessage').classList.add('hidden');
-            document.getElementById('ErrorMessage').innerText = data.error;  // Set the error message
-            document.getElementById('error').classList.remove('hidden');  // Show the error message
+            document.getElementById('ErrorMessage').innerText = data.error;
+            document.getElementById('error').classList.remove('hidden');
         }
     })
     .catch(error => {
         console.error('Error:', error);
         document.getElementById('testingMessage').classList.add('hidden');
-        document.getElementById('ErrorMessage').innerText = "An unexpected error occurred.";  // Set a generic error message
-        document.getElementById('error').classList.remove('hidden');  // Show the error message
+        document.getElementById('ErrorMessage').innerText = "An unexpected error occurred."; 
+        document.getElementById('error').classList.remove('hidden');  
     });
 });
 
@@ -161,13 +153,10 @@ HTML = """
                 if (!data.locked) {
                     window.location.href = "{{ url_for('results') }}";
                 } else {
-                    setTimeout(checkLock, 1000);  // Check again after 1 second
+                    setTimeout(checkLock, 1000);  
                 }
             });
         }
-
-        // Load servers dynamically
-
     </script>
 </body>
 </html>
@@ -290,28 +279,22 @@ def speedtest():
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE
             )
-
-            # Check if the command failed
             if result.returncode != 0:
                 try:
                     error_data = json.loads(result.stderr)
                     error_message = error_data.get("message", "Speedtest failed: Unknown error")
                 except json.JSONDecodeError:
-                    # If stderr is not JSON, use the raw error message
                     error_message = result.stderr.strip()
 
                 print(f"Speedtest failed: {error_message}")
                 return jsonify({"error": error_message}), 500
 
-            # Parse the JSON output
             data = json.loads(result.stdout)
             
-            # Extract server info
             server_info = data.get('server', {})
             server_id = server_info.get('id')
             server_name = server_info.get('name')
 
-            # Update database insert
             with sqlite3.connect(DATABASE) as conn:
                 conn.execute('''
                     INSERT INTO speedtest_results 
@@ -331,23 +314,20 @@ def speedtest():
             return jsonify({"redirect": url_for('results'), "output": data})
             
         except subprocess.CalledProcessError as e:
-            # Handle subprocess errors (e.g., invalid server ID)
             error_message = f"Speedtest failed: {e.stderr}"
             print(error_message)
             return jsonify({"error": error_message}), 500
         except json.JSONDecodeError as e:
-            # Handle JSON parsing errors
             error_message = f"Failed to parse speedtest output: {str(e)}"
             print(error_message)
             return jsonify({"error": error_message}), 500
         except Exception as e:
-            # Handle all other exceptions
             error_message = f"An unexpected error occurred: {str(e)}"
             print(error_message)
             return jsonify({"error": error_message}), 500
         finally:
             remove_lockfile()
-    servers = get_servers()  # Get the list of servers
+    servers = get_servers() 
     return render_template_string(HTML, servers=servers)
 
 @app.route("/results")
